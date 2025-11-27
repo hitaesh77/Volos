@@ -1,7 +1,7 @@
 CC = g++
 CFLAGS = -I include
 SOURCES = src/GreeksCalculator.cpp tests/TestGreekCalculator.cpp
-TARGET = greek
+TARGET = greeks
 
 $(TARGET): $(SOURCES)
 	$(CC) $(CFLAGS) $(SOURCES) -o $(TARGET)

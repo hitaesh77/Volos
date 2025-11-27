@@ -1,0 +1,27 @@
+List of current optimizations implemented (listed with help of AI):
+
+Mathematical Optimizations:
+
+Pre-computed constants - INV_SQRT_2PI and INV_SQRT_2 to avoid runtime division
+Multiplication instead of division - Using * 0.5 instead of / 2 for sigma squared calculation
+Reusing denominator for d2 - d2 = d1 - denominator avoids recalculating sigma * sqrt_T
+Using std::erfc for normal CDF - More efficient than custom implementations or erf-based approaches
+
+Caching/Avoiding Redundant Calculations:
+
+Cached sqrt_T - Calculated once and passed to helper functions
+Cached exp_rt - Expensive exponential calculated once
+Cached d1_n_prime - Normal PDF of d1 used in multiple Greeks
+Cached all CDF values - d1_cdf, d2_cdf, d1_cdf_neg, d2_cdf_neg calculated once
+Passing sqrt_T to helper - Avoids recalculating in calculate_d1_d2
+
+Memory Optimizations:
+
+Pass by const reference - const OptionInputs& input avoids copying the struct
+Return value optimization (RVO) - Returning structs by value uses RVO, no copy overhead
+Lightweight structs - Using simple structs (d1d2, GreeksResult) instead of classes
+
+Code Structure Optimizations:
+
+Single d1/d2 calculation - Combined into one function to share intermediate values
+Branch prediction friendly - Single if/else for call vs put instead of multiple branches

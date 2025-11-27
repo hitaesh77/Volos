@@ -41,8 +41,10 @@ GreeksResult GreeksCalculator::calculate_greeks_bsm(const OptionInputs& input){
     double d1_n_prime = calculate_N_prime(intermediate.d1);
     double d1_cdf = calculate_N_cdf(intermediate.d1);
     double d2_cdf = calculate_N_cdf(intermediate.d2);
-    double d1_cdf_neg = calculate_N_cdf((-1 * intermediate.d1));
-    double d2_cdf_neg = calculate_N_cdf((-1 * intermediate.d2));
+    // double d1_cdf_neg = calculate_N_cdf((-1 * intermediate.d1));
+    double d1_cdf_neg = 1 - d1_cdf;
+    // double d2_cdf_neg = calculate_N_cdf((-1 * intermediate.d2));
+    double d2_cdf_neg = 1 - d2_cdf;
 
     // greek calculations
     GreeksResult res;

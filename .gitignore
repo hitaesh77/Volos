@@ -1,1 +1,17 @@
+# CMake build directories
+build/
+.cmake/
+
+# MSVC experimental and telemetry files
+.vs/
+out/
+
+# Compiled Binaries
 *.exe
+*.dll
+*.lib
+*.pdb
+
+# Ninja/Make specific files
+.ninja_deps
+.ninja_log

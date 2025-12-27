@@ -4,7 +4,7 @@
 namespace volos {
 
     // enum class makes OptionType scope
-    // call it by saying OPtionType::Call, instead of Call
+    // call it by saying OptionType::Call, instead of Call
     // safer usually
     enum class OptionType : uint8_t {
         Call = 0,

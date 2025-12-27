@@ -12,6 +12,16 @@ namespace volos {
         double sigma;   // sigma: implied volatility
     };
 
+    struct OptionInputBatch {
+        const double* S;
+        const double* K;
+        const double* T;
+        const double* sigma;
+        size_t n;
+        double r;
+        double q;
+    };
+
     struct GreeksResult {
         double price;
         double delta;

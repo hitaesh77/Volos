@@ -1,7 +1,7 @@
 #pragma once
 
-#include "include/types.h"
-#include "include/enums.h"
+#include "types.h"
+#include "enums.h"
 // #include <cstddef>
 
 namespace volos::bsm {
@@ -12,14 +12,9 @@ namespace volos::bsm {
     );
 
     // batch version
+    // not using std::vector to keep mem contiguous -> simpel array for now, may change
     void greeks_batch(
-        const double* S,
-        const double* K,
-        const double* T,
-        const double* sigma,
-        std::size_t n,
-        double r,
-        double q,
+        const OptionInputBatch& input,
         OptionType type,
         GreeksResult* out
     );

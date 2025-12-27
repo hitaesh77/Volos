@@ -1,7 +1,5 @@
-#include "bsm/bsm_greeks.h"
+#include "bsm/bsm_price.h"
 #include "volos_math.h"
-
-// NEED TO REFACTOR TO REDUCE REDUNDANT PRICE CALCS
 
 namespace {
 
@@ -18,10 +16,11 @@ namespace {
 
 } // anonymous namespace
 
+
 namespace volos::bsm {
 
-    // single greeks calc
-    GreeksResult greeks(
+    // single price calc
+    double price(
         const OptionInput& input,
         OptionType type
     ) {
@@ -34,7 +33,6 @@ namespace volos::bsm {
         calculate_d1_d2(input, sqrt_T, d1, d2);
 
         // cache recurring vars that require d1, d2
-        double d1_pdf = volos::math::norm_pdf(d1);
         double d1_cdf = volos::math::norm_cdf(d1);
         double d2_cdf = volos::math::norm_cdf(d2);
         // double d1_cdf_neg = calculate_N_cdf((-1 * intermediate.d1));
@@ -42,39 +40,25 @@ namespace volos::bsm {
         // double d2_cdf_neg = calculate_N_cdf((-1 * intermediate.d2));
         double d2_cdf_neg = 1 - d2_cdf;
 
-        // greek calculations
-        GreeksResult res;
-        
-        res.delta = d1_cdf;
-        res.gamma =d1_pdf / (input.S * input.sigma * sqrt_T);
-        res.vega = input.S * sqrt_T * d1_pdf;
-
-        if (type == OptionType::Put) { // PUT OPTION
-            res.delta = res.delta - 1;
-            res.price = (input.K * exp_rt * d2_cdf_neg) - (input.S * d1_cdf_neg);
-            res.theta = -((input.S * input.sigma * d1_pdf) / (2 * sqrt_T)) + (input.r * input.K * exp_rt * d2_cdf_neg);
-            res.rho = -(input.K * input.T * exp_rt * d2_cdf_neg);
-        } else { // CALL OPTION
-            res.price = (input.S * d1_cdf) - (input.K * exp_rt * d2_cdf);
-            res.theta = -((input.S * input.sigma * d1_pdf) / (2 * sqrt_T)) - (input.r * input.K * exp_rt * d2_cdf);
-            res.rho = input.K * input.T * exp_rt * d2_cdf;
+        if (type == OptionType::Put) {
+            return (input.K * exp_rt * d2_cdf_neg) - (input.S * d1_cdf_neg);
+        } else {
+            return (input.S * d1_cdf) - (input.K * exp_rt * d2_cdf);
         }
-        
-        return res;
     }
 
-    // batch greeks calc
+    // batch price calc
     // loop for now, may change to make parallel later
-    void greeks_batch(
+    void price_batch(
         const OptionInputBatch& input,
         OptionType type,
-        GreeksResult* out
+        double* out
     ) {
         for (size_t i = 0; i < input.n; ++i) {
             OptionInput in{
                 input.S[i], input.K[i], input.T[i], input.r, input.q, input.sigma[i]
             };
-            out[i] = greeks(in, type);
+            out[i] = price(in, type);
         }
     }
 

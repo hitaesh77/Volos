@@ -1,5 +1,8 @@
 # Create the test executable
-add_executable(unit_tests test_bsm_greeks.cpp)
+add_executable(unit_tests 
+ test_bsm_greeks.cpp 
+ test_bsm_price.cpp
+)
 
 # Link the test to your logic AND the GTest framework
 # GTest::gtest_main provides a built-in main() function for you

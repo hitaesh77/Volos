@@ -17,7 +17,10 @@ FetchContent_MakeAvailable(googletest)
 
 # 2. Define the Library
 # We include all .cpp files in src/bsm
-add_library(core_lib src/bsm/bsm_greeks.cpp)
+add_library(core_lib 
+  src/bsm/bsm_greeks.cpp 
+  src/bsm/bsm_price.cpp
+)
 
 # 3. Handle Headers
 # 'PUBLIC' means anyone linking to core_lib automatically sees the 'include' folder

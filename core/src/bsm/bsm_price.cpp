@@ -7,7 +7,7 @@ namespace {
 
     // calculate intermediate value d1 and d2
     void calculate_d1_d2(const volos::OptionInput& input, double sqrt_T, double& d1, double& d2){
-        double numerator = std::log(input.S / input.K) + ((input.r + ((input.sigma * input.sigma) * 0.5)) * input.T);
+        double numerator = std::log(input.S / input.K) + ((input.r - input.q + ((input.sigma * input.sigma) * 0.5)) * input.T);
         double denominator = sqrt_T * input.sigma;
 
         d1 = numerator / denominator;
@@ -26,7 +26,8 @@ namespace volos::bsm {
     ) {
         // cache recurring vars
         double sqrt_T = std::sqrt(input.T);
-        double exp_rt = std::exp((-1 * input.r * input.T));
+        double exp_rT = std::exp((-1 * input.r * input.T));
+        double exp_qT = std::exp((-1 * input.q * input.T));
 
         // intermediate variables: d1, d2
         double d1, d2;
@@ -41,9 +42,9 @@ namespace volos::bsm {
         double d2_cdf_neg = 1 - d2_cdf;
 
         if (type == OptionType::Put) {
-            return (input.K * exp_rt * d2_cdf_neg) - (input.S * d1_cdf_neg);
+            return (input.K * exp_rT * d2_cdf_neg) - (input.S * exp_qT * d1_cdf_neg);
         } else {
-            return (input.S * d1_cdf) - (input.K * exp_rt * d2_cdf);
+            return (input.S * exp_qT * d1_cdf) - (input.K * exp_rT * d2_cdf);
         }
     }
 

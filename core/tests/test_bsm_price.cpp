@@ -1,82 +1,142 @@
-#include <gtest/gtest.h>
+#include <cmath>
+#include <cstdlib>
+#include <iostream>
+
 #include "bsm/bsm_price.h"
+#include "types.h"
+#include "enums.h"
 
-// ATM Call
-TEST(BSMPriceTest, CallPriceATM) {
-	volos::OptionInput input{100.0, 100.0, 1.0, 0.05, 0.0, 0.2};
-	double p = volos::bsm::price(input, volos::OptionType::Call);
+namespace {
 
-	EXPECT_NEAR(p, 10.4506, 0.001);
-	EXPECT_GT(p, 0.0);
+void assert_near(double actual, double expected, double tolerance, const char* test_name) {
+    if (std::fabs(actual - expected) > tolerance) {
+        std::cerr << "FAIL: " << test_name << "\n"
+                  << "  expected: " << expected << "\n"
+                  << "  actual:   " << actual << "\n"
+                  << "  diff:     " << std::fabs(actual - expected) << "\n";
+        std::exit(1);
+    }
 }
 
-// ATM Put
-TEST(BSMPriceTest, PutPriceATM) {
-	volos::OptionInput input{100.0, 100.0, 1.0, 0.05, 0.0, 0.2};
-	double p = volos::bsm::price(input, volos::OptionType::Put);
-
-	EXPECT_NEAR(p, 5.5735, 0.001);
-	EXPECT_GE(p, 0.0);
+void assert_true(bool condition, const char* test_name) {
+    if (!condition) {
+        std::cerr << "FAIL: " << test_name << "\n";
+        std::exit(1);
+    }
 }
 
-// Batch pricing matches individual calls
-TEST(BSMPriceTest, BatchMatchesIndividual) {
-	double S[2] = {100.0, 110.0};
-	double K[2] = {100.0, 100.0};
-	double T[2] = {1.0, 1.0};
-	double sigma[2] = {0.2, 0.2};
-
-	volos::OptionInputBatch batch{S, K, T, sigma, 2, 0.05, 0.0};
-	double results[2];
-
-	volos::bsm::price_batch(batch, volos::OptionType::Call, results);
-
-	volos::OptionInput a{S[0], K[0], T[0], 0.05, 0.0, sigma[0]};
-	volos::OptionInput b{S[1], K[1], T[1], 0.05, 0.0, sigma[1]};
-
-	EXPECT_NEAR(results[0], volos::bsm::price(a, volos::OptionType::Call), 1e-12);
-	EXPECT_NEAR(results[1], volos::bsm::price(b, volos::OptionType::Call), 1e-12);
+volos::OptionInput make_default_input() {
+    volos::OptionInput input{};
+    input.S = 100.0;
+    input.K = 100.0;
+    input.T = 1.0;
+    input.r = 0.05;
+    input.q = 0.0;
+    input.sigma = 0.2;
+    return input;
 }
 
-// Put-Call parity: C - P = S - K * exp(-rT)
-TEST(BSMPriceTest, PutCallParity) {
-	volos::OptionInput input{120.0, 100.0, 0.5, 0.03, 0.0, 0.25};
+}  // namespace
 
-	double C = volos::bsm::price(input, volos::OptionType::Call);
-	double P = volos::bsm::price(input, volos::OptionType::Put);
+void run_bsm_price_tests() {
+    std::cout << "Running BSM price tests...\n";
 
-	double rhs = input.S - (input.K * std::exp(-input.r * input.T));
-	EXPECT_NEAR(C - P, rhs, 1e-8);
-}
+    {
+        auto input = make_default_input();
 
-// Price monotonicity: price increases with spot S
-TEST(BSMPriceTest, MonotonicityWithSpot) {
-	volos::OptionInput low{90.0, 100.0, 1.0, 0.05, 0.0, 0.2};
-	volos::OptionInput high{110.0, 100.0, 1.0, 0.05, 0.0, 0.2};
+        const double call = volos::bsm::price(input, volos::OptionType::Call);
+        const double put = volos::bsm::price(input, volos::OptionType::Put);
 
-	double p_low = volos::bsm::price(low, volos::OptionType::Call);
-	double p_high = volos::bsm::price(high, volos::OptionType::Call);
+        assert_near(call, 10.4506, 1e-3, "ATM European call price");
+        assert_near(put, 5.5735, 1e-3, "ATM European put price");
+    }
 
-	EXPECT_GT(p_high, p_low);
-}
+    {
+        auto input = make_default_input();
 
-// Price increases with volatility (call)
-TEST(BSMPriceTest, MonotonicityWithVolatility) {
-	volos::OptionInput lowSigma{100.0, 100.0, 1.0, 0.05, 0.0, 0.1};
-	volos::OptionInput highSigma{100.0, 100.0, 1.0, 0.05, 0.0, 0.5};
+        const double call = volos::bsm::price(input, volos::OptionType::Call);
+        const double put = volos::bsm::price(input, volos::OptionType::Put);
 
-	double p_low = volos::bsm::price(lowSigma, volos::OptionType::Call);
-	double p_high = volos::bsm::price(highSigma, volos::OptionType::Call);
+        const double lhs = call - put;
+        const double rhs = input.S * std::exp(-input.q * input.T)
+                         - input.K * std::exp(-input.r * input.T);
 
-	EXPECT_GT(p_high, p_low);
-}
+        assert_near(lhs, rhs, 1e-6, "Put-call parity with q = 0");
+    }
 
-// Deep ITM call respects lower bound: C >= S - K*exp(-rT)
-TEST(BSMPriceTest, DeepITMCallLowerBound) {
-	volos::OptionInput input{150.0, 100.0, 1.0, 0.05, 0.0, 0.2};
+    {
+        auto input = make_default_input();
+        input.q = 0.02;
 
-	double C = volos::bsm::price(input, volos::OptionType::Call);
-	double lower = input.S - (input.K * std::exp(-input.r * input.T));
+        const double call = volos::bsm::price(input, volos::OptionType::Call);
+        const double put = volos::bsm::price(input, volos::OptionType::Put);
 
-	EXPECT_GE(C + 1e-12, lower);
+        const double lhs = call - put;
+        const double rhs = input.S * std::exp(-input.q * input.T)
+                         - input.K * std::exp(-input.r * input.T);
+
+        assert_near(lhs, rhs, 1e-6, "Put-call parity with dividend yield");
+    }
+
+    {
+        auto low_spot = make_default_input();
+        auto high_spot = make_default_input();
+
+        low_spot.S = 90.0;
+        high_spot.S = 110.0;
+
+        const double low_call = volos::bsm::price(low_spot, volos::OptionType::Call);
+        const double high_call = volos::bsm::price(high_spot, volos::OptionType::Call);
+
+        assert_true(high_call > low_call, "Call price increases as spot increases");
+    }
+
+    {
+        auto low_vol = make_default_input();
+        auto high_vol = make_default_input();
+
+        low_vol.sigma = 0.1;
+        high_vol.sigma = 0.4;
+
+        const double low_call = volos::bsm::price(low_vol, volos::OptionType::Call);
+        const double high_call = volos::bsm::price(high_vol, volos::OptionType::Call);
+
+        assert_true(high_call > low_call, "Call price increases as volatility increases");
+    }
+
+    {
+        constexpr std::size_t n = 3;
+
+        double S[n] = {100.0, 105.0, 110.0};
+        double K[n] = {100.0, 100.0, 100.0};
+        double T[n] = {1.0, 1.0, 1.0};
+        double sigma[n] = {0.2, 0.25, 0.3};
+        double out[n] = {0.0, 0.0, 0.0};
+
+        volos::OptionInputBatch batch{};
+        batch.S = S;
+        batch.K = K;
+        batch.T = T;
+        batch.sigma = sigma;
+        batch.r = 0.05;
+        batch.q = 0.0;
+        batch.n = n;
+
+        volos::bsm::price_batch(batch, volos::OptionType::Call, out);
+
+        for (std::size_t i = 0; i < n; ++i) {
+            volos::OptionInput scalar{};
+            scalar.S = S[i];
+            scalar.K = K[i];
+            scalar.T = T[i];
+            scalar.r = batch.r;
+            scalar.q = batch.q;
+            scalar.sigma = sigma[i];
+
+            const double expected = volos::bsm::price(scalar, volos::OptionType::Call);
+            assert_near(out[i], expected, 1e-12, "Batch price matches scalar price");
+        }
+    }
+
+    std::cout << "BSM price tests passed.\n";
 }

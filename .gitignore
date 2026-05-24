@@ -15,3 +15,5 @@ out/
 # Ninja/Make specific files
 .ninja_deps
 .ninja_log
+
+/.vscode
